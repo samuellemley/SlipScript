@@ -1,0 +1,20 @@
+# ── Passenger / Python WSGI ────────────────────────────────────────────────────
+PassengerEnabled        On
+PassengerAppType        wsgi
+PassengerStartupFile    passenger_wsgi.py
+
+# If IONOS requires an explicit Python path, uncomment and adjust:
+# PassengerPython /usr/bin/python3
+
+# ── Optional: set environment variables here instead of a .env file ────────────
+# SetEnv ALMA_API_KEY  l8xxYOURKEYHERE
+# SetEnv ALMA_BASE_URL https://api-na.hosted.exlibrisgroup.com
+
+# ── Security: block direct access to Python source and config files ────────────
+<FilesMatch "\.(py|env|txt|sh|cfg|ini)$">
+    Require all denied
+</FilesMatch>
+# Allow the app to serve itself normally
+<FilesMatch "^$">
+    Require all granted
+</FilesMatch>

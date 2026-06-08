@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call Number Strips</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Fira Mono', 'Roboto Mono', 'Courier New', monospace;
+      --border: #ccc;
+      --muted: #888;
+      --bg: #fff;
+      --fg: #111;
+    }
+
+    body {
+      font-family: var(--mono);
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 1.25rem 2rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 13px; font-weight: bold; }
+    header p  { color: var(--muted); margin-top: 0.2rem; }
+
+    /* ── Layout ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    /* ── Sections ── */
+    .card {
+      border-bottom: 1px solid var(--border);
+    }
+    .card-header {
+      padding: 0.9rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      background: #f9f9f9;
+    }
+    .step { color: var(--muted); flex-shrink: 0; }
+    .card-header h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; }
+    .card-header .subtitle { color: var(--muted); margin-left: auto; }
+    .card-body { padding: 1.25rem 2rem; }
+
+    /* ── API key panel ── */
+    #keyConfiguredMsg { color: #2a7a2a; }
+    .key-row { display: flex; gap: 0.5rem; }
+    .key-row input {
+      flex: 1;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 13px;
+      background: var(--bg);
+    }
+    .key-row input:focus { outline: none; border-color: var(--fg); }
+    .key-hint { color: var(--muted); margin-top: 0.5rem; }
+
+    /* ── Scan area ── */
+    .scan-row { display: flex; gap: 0.5rem; }
+    #barcodeInput {
+      flex: 1;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      background: var(--bg);
+    }
+    #barcodeInput:focus { outline: none; border-color: var(--fg); }
+    #barcodeInput::placeholder { color: #bbb; letter-spacing: 0; }
+
+    #barcodeList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.4rem;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      animation: pop 0.1s ease-out;
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: translateY(-2px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .chip-remove {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; padding: 0; font-size: 12px; line-height: 1;
+      font-family: var(--mono);
+    }
+    .chip-remove:hover { color: var(--fg); }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--fg);
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+      background: var(--bg);
+      color: var(--fg);
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn-primary   { background: var(--fg); color: var(--bg); }
+    .btn-primary:hover  { background: #333; border-color: #333; }
+    .btn-ghost { border-color: var(--border); }
+    .btn-ghost:hover { border-color: var(--fg); }
+    .btn:disabled  { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Actions bar ── */
+    .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .tally { color: var(--muted); margin-left: auto; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left;
+      padding: 0.3rem 0.5rem;
+      border-bottom: 1px solid var(--fg);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: normal;
+    }
+    tbody td {
+      padding: 0.2rem 0.35rem;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f5f5f5; }
+
+    td.editable input {
+      width: 100%;
+      padding: 0.2rem 0.35rem;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-family: var(--mono);
+      background: transparent;
+    }
+    td.editable input:focus {
+      outline: none;
+      border-color: var(--border);
+      background: var(--bg);
+    }
+    td.mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+    .row-del {
+      background: none; border: none; color: #ccc;
+      cursor: pointer; padding: 0.15rem 0.3rem;
+      font-family: var(--mono); font-size: 12px;
+    }
+    .row-del:hover { color: var(--fg); }
+
+    tr.err-row td { color: #900; font-size: 12px; }
+
+    /* ── Options ── */
+    .options-row {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .opt { display: flex; align-items: center; gap: 0.4rem; }
+    .opt label { cursor: pointer; }
+    .opt input[type="number"] {
+      width: 44px;
+      padding: 0.25rem 0.35rem;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 13px;
+      text-align: center;
+      background: var(--bg);
+    }
+    .opt input[type="number"]:focus { outline: none; border-color: var(--fg); }
+
+    /* ── Messages ── */
+    .msg {
+      margin-top: 0.65rem;
+      font-size: 12px;
+    }
+    .msg-err  { color: #900; }
+    .msg-err::before  { content: '! '; }
+    .msg-ok   { color: #2a7a2a; }
+    .msg-ok::before   { content: '✓ '; }
+
+    /* ── Spinner ── */
+    .spin {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 1.5px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spinning 0.55s linear infinite;
+    }
+    @keyframes spinning { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>call-number-strip-generator</h1>
+  <p>// ExLibris Alma</p>
+</header>
+
+<main>
+
+  <!-- ── API Key ── -->
+  <div class="card" id="keyCard">
+    <div class="card-header">
+      <span class="step">[ key ]</span>
+      <h2>Alma API Key</h2>
+      <span id="keyConfiguredMsg" class="hidden">configured server-side</span>
+    </div>
+    <div class="card-body">
+      <div class="key-row" style="margin-bottom:0.75rem;">
+        <label style="color:var(--muted);white-space:nowrap;">region =</label>
+        <select id="regionSelect" style="font-family:var(--mono);font-size:13px;border:1px solid var(--border);padding:0.4rem 0.6rem;background:var(--bg);flex:1;">
+          <option value="https://api-na.hosted.exlibrisgroup.com">NA — North America</option>
+          <option value="https://api-eu.hosted.exlibrisgroup.com">EU — Europe</option>
+          <option value="https://api-ap.hosted.exlibrisgroup.com">AP — Asia Pacific</option>
+          <option value="https://api-ca.hosted.exlibrisgroup.com">CA — Canada</option>
+          <option value="https://api-cn.hosted.exlibrisgroup.com">CN — China</option>
+        </select>
+      </div>
+      <div id="keyBody">
+        <div class="key-row">
+          <input type="password" id="apiKeyInput" placeholder="l8xx…" autocomplete="off" />
+          <button class="btn btn-ghost" onclick="saveKey()">save</button>
+        </div>
+        <p class="key-hint">// stored in memory only, never written to disk</p>
+        <div id="keyMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Inspect ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step">[ ? ]</span>
+      <h2>Inspect Raw JSON</h2>
+      <span class="subtitle" style="color:var(--muted);">// check available fields</span>
+    </div>
+    <div class="card-body">
+      <div class="scan-row">
+        <input type="text" id="inspectInput" placeholder="barcode" autocomplete="off"
+               style="font-family:var(--mono);font-size:13px;flex:1;padding:0.4rem 0.6rem;border:1px solid var(--border);background:var(--bg);" />
+        <button class="btn btn-ghost" onclick="inspectBarcode()">lookup</button>
+      </div>
+      <div id="inspectMsg"></div>
+      <pre id="inspectOut" class="hidden" style="margin-top:0.75rem;padding:0.75rem;border:1px solid var(--border);font-size:11px;line-height:1.5;overflow:auto;max-height:400px;background:#fafafa;white-space:pre-wrap;word-break:break-all;"></pre>
+    </div>
+  </div>
+
+  <!-- ── Scan ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step">[1]</span>
+      <h2>Scan Barcodes</h2>
+      <span id="scanSubtitle" class="subtitle hidden"></span>
+    </div>
+    <div class="card-body">
+      <div class="key-row" style="margin-bottom:0.75rem;">
+        <label style="color:var(--muted);white-space:nowrap;">mode =</label>
+        <select id="modeSelect" onchange="onModeChange()" style="font-family:var(--mono);font-size:13px;border:1px solid var(--border);padding:0.4rem 0.6rem;background:var(--bg);flex:1;">
+          <option value="existing">existing barcode</option>
+          <option value="new">generate new barcode</option>
+        </select>
+      </div>
+      <div class="scan-row">
+        <input
+          type="text"
+          id="barcodeInput"
+          placeholder="focus here and scan, or type + enter"
+          autocomplete="off"
+          autofocus
+        />
+        <button class="btn btn-ghost" onclick="clearAll()">clear</button>
+      </div>
+      <div id="barcodeList"></div>
+    </div>
+  </div>
+
+  <!-- ── Fetch ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step">[2]</span>
+      <h2>Look Up Metadata</h2>
+    </div>
+    <div class="card-body">
+      <div class="actions">
+        <button class="btn btn-primary" id="fetchBtn" onclick="fetchMeta()">
+          look up in alma
+        </button>
+        <span id="fetchTally" class="tally"></span>
+      </div>
+      <div id="fetchMsg"></div>
+      <div id="tableWrap" class="table-wrap hidden">
+        <table>
+          <thead>
+            <tr>
+              <th>author</th>
+              <th>short_title</th>
+              <th>location</th>
+              <th>call_number</th>
+              <th>volume</th>
+              <th>copy_number</th>
+              <th>barcode</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Generate ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="step">[3]</span>
+      <h2>Generate PDF</h2>
+    </div>
+    <div class="card-body">
+      <div class="options-row">
+        <div class="opt">
+          <input type="checkbox" id="withBarcodes" checked />
+          <label for="withBarcodes">barcode verso (short-edge duplex)</label>
+        </div>
+        <div class="opt">
+          <label for="stripsPerPage">strips_per_page =</label>
+          <input type="number" id="stripsPerPage" value="4" min="1" max="8" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="genBtn" onclick="generatePDF()">
+          download pdf
+        </button>
+      </div>
+      <div id="genMsg"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── State ────────────────────────────────────────────────────────────────────
+  let apiKey   = '';
+  let barcodes = [];   // ordered, deduplicated
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  (async function init() {
+    try {
+      const res  = await fetch('/api/config');
+      const data = await res.json();
+      if (data.api_key_configured) {
+        document.getElementById('keyConfiguredMsg').classList.remove('hidden');
+        document.getElementById('keyBody').classList.add('hidden');
+      }
+    } catch (_) {}
+  })();
+
+  // ── Inspect ──────────────────────────────────────────────────────────────────
+  document.getElementById('inspectInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') inspectBarcode();
+  });
+
+  async function inspectBarcode() {
+    const barcode = document.getElementById('inspectInput').value.trim();
+    if (!barcode) return;
+    const out = document.getElementById('inspectOut');
+    out.classList.add('hidden');
+    flash('inspectMsg', '', 'ok');
+
+    try {
+      const res  = await fetch('/api/inspect', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({
+          barcode,
+          api_key:  apiKey,
+          base_url: document.getElementById('regionSelect').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { flash('inspectMsg', data.error || 'Lookup failed.', 'err'); return; }
+      out.textContent = JSON.stringify(data, null, 2);
+      out.classList.remove('hidden');
+    } catch (err) {
+      flash('inspectMsg', `Error: ${err.message}`, 'err');
+    }
+  }
+
+  // ── Mode ──────────────────────────────────────────────────────────────────────
+  function onModeChange() {
+    const isNew = document.getElementById('modeSelect').value === 'new';
+    document.getElementById('barcodeInput').placeholder = isNew
+      ? 'scan or paste temporary barcode, then enter'
+      : 'focus here and scan, or type + enter';
+  }
+
+  // ── API key ───────────────────────────────────────────────────────────────────
+  function saveKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val) return;
+    apiKey = val;
+    document.getElementById('apiKeyInput').value = '';
+    flash('keyMsg', 'Key saved for this session.', 'ok');
+    setTimeout(() => document.getElementById('barcodeInput').focus(), 150);
+  }
+
+  // Save key on Enter too
+  document.getElementById('apiKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveKey();
+  });
+
+  // ── Barcode input ─────────────────────────────────────────────────────────────
+  document.getElementById('barcodeInput').addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = this.value.trim();
+    if (!val) return;
+    if (barcodes.includes(val)) {
+      this.value = '';
+      return;  // silent dedup
+    }
+    barcodes.push(val);
+    this.value = '';
+    renderChips();
+  });
+
+  function renderChips() {
+    document.getElementById('barcodeList').innerHTML = barcodes.map(b => `
+      <span class="chip">
+        ${esc(b)}
+        <button class="chip-remove" onclick="removeBarcode('${esc(b)}')" title="Remove">×</button>
+      </span>
+    `).join('');
+    const sub = document.getElementById('scanSubtitle');
+    if (barcodes.length) {
+      sub.textContent = `${barcodes.length} barcode${barcodes.length !== 1 ? 's' : ''}`;
+      sub.classList.remove('hidden');
+    } else {
+      sub.classList.add('hidden');
+    }
+  }
+
+  function removeBarcode(code) {
+    barcodes = barcodes.filter(b => b !== code);
+    renderChips();
+  }
+
+  function clearAll() {
+    barcodes = [];
+    renderChips();
+    document.getElementById('tbody').innerHTML = '';
+    document.getElementById('tableWrap').classList.add('hidden');
+    document.getElementById('fetchTally').textContent = '';
+    document.getElementById('fetchMsg').innerHTML = '';
+    document.getElementById('barcodeInput').focus();
+  }
+
+  // ── Fetch metadata ────────────────────────────────────────────────────────────
+  async function fetchMeta() {
+    if (!barcodes.length) {
+      flash('fetchMsg', 'Scan at least one barcode first.', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('fetchBtn');
+    setLoading(btn, true, 'Looking up…');
+    document.getElementById('fetchMsg').innerHTML = '';
+
+    try {
+      const res  = await fetch('/api/fetch', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({
+          barcodes,
+          api_key:  apiKey,
+          base_url: document.getElementById('regionSelect').value,
+          mode:     document.getElementById('modeSelect').value,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) { flash('fetchMsg', data.error || 'Fetch failed.', 'err'); return; }
+
+      renderTable(data.rows, data.errors);
+
+      const n = data.rows.length, e = data.errors.length;
+      document.getElementById('fetchTally').textContent =
+        `${n} found${e ? `, ${e} skipped` : ''}`;
+
+      if (e) {
+        const list = data.errors.map(x => `${x.barcode}: ${x.error}`).join(' · ');
+        flash('fetchMsg', `Skipped — ${list}`, 'err');
+      }
+    } catch (err) {
+      flash('fetchMsg', `Network error: ${err.message}`, 'err');
+    } finally {
+      setLoading(btn, false, 'Look Up in Alma');
+    }
+  }
+
+  function renderTable(rows, errors) {
+    const tbody = document.getElementById('tbody');
+    const wrap  = document.getElementById('tableWrap');
+
+    tbody.innerHTML =
+      rows.map(r => `
+        <tr>
+          <td class="editable"><input value="${esc(r.author)}"      data-f="author"      /></td>
+          <td class="editable"><input value="${esc(r.short_title)}" data-f="short_title" /></td>
+          <td class="editable"><input value="${esc(r.location)}"    data-f="location"    /></td>
+          <td class="editable"><input value="${esc(r.call_number)}" data-f="call_number" /></td>
+          <td class="editable"><input value="${esc(r.volume || '')}" data-f="volume"     /></td>
+          <td class="editable"><input value="${esc(r.copy_number || '')}" data-f="copy_number" /></td>
+          <td class="mono">${esc(r.barcode)}</td>
+          <td><button class="row-del" onclick="this.closest('tr').remove()" title="Remove">✕</button></td>
+        </tr>
+      `).join('') +
+      errors.map(e => `
+        <tr class="err-row">
+          <td colspan="7">⚠ ${esc(e.barcode)} — ${esc(e.error)}</td>
+        </tr>
+      `).join('');
+
+    wrap.classList.toggle('hidden', rows.length === 0 && errors.length === 0);
+  }
+
+  function getRows() {
+    return [...document.querySelectorAll('#tbody tr:not(.err-row)')].map(tr => {
+      const row = {};
+      tr.querySelectorAll('input[data-f]').forEach(inp => { row[inp.dataset.f] = inp.value.trim() || ''; });
+      row.barcode = tr.querySelector('td.mono')?.textContent.trim() || '';
+      return row;
+    });
+  }
+
+  // ── Generate PDF ──────────────────────────────────────────────────────────────
+  async function generatePDF() {
+    const rows = getRows();
+    if (!rows.length) {
+      flash('genMsg', 'No rows to generate — look up some barcodes first.', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('genBtn');
+    setLoading(btn, true, 'Generating…');
+    document.getElementById('genMsg').innerHTML = '';
+
+    try {
+      const res = await fetch('/api/generate', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({
+          rows,
+          with_barcodes:   document.getElementById('withBarcodes').checked,
+          strips_per_page: parseInt(document.getElementById('stripsPerPage').value) || 4,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        flash('genMsg', data.error || 'Generation failed.', 'err');
+        return;
+      }
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), { href: url, download: 'callnumber_strips.pdf' });
+      a.click();
+      URL.revokeObjectURL(url);
+      flash('genMsg', `Downloaded ${rows.length} strip${rows.length !== 1 ? 's' : ''}.`, 'ok');
+    } catch (err) {
+      flash('genMsg', `Error: ${err.message}`, 'err');
+    } finally {
+      setLoading(btn, false, 'Download PDF');
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function flash(id, text, type) {
+    const el  = document.getElementById(id);
+    const div = document.createElement('div');
+    div.className = `msg msg-${type}`;
+    div.textContent = text;
+    el.innerHTML = '';
+    el.appendChild(div);
+  }
+
+  function setLoading(btn, loading, label) {
+    btn.disabled    = loading;
+    btn.innerHTML   = loading ? `<span class="spin"></span> ${label}` : label;
+  }
+</script>
+</body>
+</html>

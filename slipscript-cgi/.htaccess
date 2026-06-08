@@ -1,0 +1,14 @@
+Options +ExecCGI
+AddHandler cgi-script .cgi
+
+RewriteEngine On
+RewriteBase /slipscript/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.cgi/$1 [L,QSA]
+
+DirectoryIndex index.cgi
+
+<FilesMatch "\.(env|cfg|ini|sh)$">
+    Require all denied
+</FilesMatch>

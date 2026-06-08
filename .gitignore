@@ -1,0 +1,60 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+env/
+.venv/
+ENV/
+
+# ── Secrets / environment variables ───────────────────────────────────────────
+# Never commit a real .env — copy .env.example to .env locally and fill it in.
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── macOS / Windows / editors ─────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Generated output files ────────────────────────────────────────────────────
+callnumber_strips.pdf
+test_strips_with_barcodes.pdf
+test_output.csv
+
+# ── Real catalog data (keep out of source control) ────────────────────────────
+# barcodes.txt is read by fetch_callnumber_labels.py; books.csv is its output.
+# An example template lives at barcodes.example.txt — copy it to barcodes.txt
+# locally with your real barcodes, but don't commit the result.
+barcodes.txt
+books.csv
+
+# ── Build / deploy artifacts (reproducible from source) ───────────────────────
+callnumber-strips-deploy/
+callnumber-strips-deploy.zip
+
+# ── Passenger restart trigger (created on the production server) ──────────────
+tmp/

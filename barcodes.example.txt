@@ -1,0 +1,9 @@
+# Example barcodes file for fetch_callnumber_labels.py.
+# Copy this file to barcodes.txt and replace the example lines with your
+# real Alma item barcodes. One barcode per line. Lines starting with # are
+# treated as comments and ignored. Blank lines are ignored.
+#
+# Example:
+# 38482018000001
+# 38482018000002
+# 38482018000003
