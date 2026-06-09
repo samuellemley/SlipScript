@@ -426,8 +426,9 @@ def extract_row(item: dict) -> dict:
     # Bare numerics get a "COPY NO. " prefix at print time; values that
     # already contain letters (e.g. "Copy 2", "c.1A") pass through.
     copy_number = (holding.get("copy_id") or "").strip()
-    if copy_number and copy_number.isdigit():
-        copy_number = f"COPY NO. {copy_number}"
+    if copy_number.isdigit():
+        n = int(copy_number)
+        copy_number = f"COPY NO. {n}" if n > 1 else ""
 
     return {
         "author":      author,
